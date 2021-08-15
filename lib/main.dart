@@ -1,7 +1,9 @@
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_complete_guide/screens/auth_screen.dart';
 
 import './screens/chat_screen.dart';
+
 import 'package:flutter/material.dart';
 
 
@@ -29,7 +31,16 @@ class MyApp extends StatelessWidget {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))
         )
       ),
-      home: AuthScreen(),
+      home: StreamBuilder(
+        stream: FirebaseAuth.instance.onAuthStateChanged,
+        builder: (ctx,dataSnapshot){
+          if(dataSnapshot.hasData){
+            //Checks if token is there
+            return ChatScreen();
+          }
+          return AuthScreen();
+        },
+      )
     );
   }
 }
