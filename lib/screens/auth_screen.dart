@@ -69,7 +69,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
         setState(() {
                   isLoading = false;
                 });
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        Scaffold.of(context).showSnackBar(SnackBar(
           content: Text(errormsg),
           backgroundColor: Theme.of(context).errorColor,
         ));

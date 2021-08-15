@@ -1,4 +1,3 @@
-import 'dart:html';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -32,7 +31,7 @@ class Messages extends StatelessWidget {
               itemBuilder: (ctx, index) => MessageBubble(
                 chatDocs[index]['text'],
                 futureSnapshot.data.uid==chatDocs[index]['userId']?true:false,
-                messageKey:ValueKey(chatDocs[index].documentId)
+                messageKey:ValueKey(chatDocs[index].documentID)
                 )
                 );
           },
