@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_complete_guide/widgets/chat/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 // import 'package:firebase/firestore.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -19,6 +23,11 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   var isLoading = false;
 
   final _formKey = GlobalKey<FormState>();
+  File _userImageFile;
+
+  void _pickedImage(File image) {
+    _userImageFile = image;
+  }
 
   @override
   void initState() {
@@ -30,6 +39,13 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   void _onClickSubmit() async {
     var isValid = _formKey.currentState.validate();
 
+    if (_userImageFile == null && !isSignIn) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Please select an image'),
+        backgroundColor: Theme.of(context).errorColor,
+      ));
+      return;
+    }
     if (isValid) {
       _formKey.currentState.save();
       FocusScope.of(context).unfocus();
@@ -37,29 +53,35 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
       final auth = FirebaseAuth.instance;
       try {
         setState(() {
-          isLoading = true;        
-                });
-        
+          isLoading = true;
+        });
+
         if (isSignIn) {
           //Sign In API
           var signInResponse = await auth.signInWithEmailAndPassword(
               email: _email.trim(), password: _password.trim());
-              print(signInResponse.user.getIdToken());
+          print(signInResponse.user.getIdToken());
         } else {
           //SignUp Api
           var signUpResponse = await auth.createUserWithEmailAndPassword(
               email: _email.trim(), password: _password.trim());
           print(signUpResponse.user);
-         await Firestore.instance.collection('users').document(signUpResponse.user.uid).setData(
-           {
-             'username':_username,
-             'email':_email
-           }
-         );
+
+         final ref =  FirebaseStorage.instance.ref() //ref gives us access to the root cloud storage bucket
+            .child('user_images').child(signUpResponse.user.uid+'.jpg');
+
+         await ref.putFile(_userImageFile).onComplete;
+
+         final img_url = await ref.getDownloadURL();
+        //  print("Image Url: ${img_url}");
+          await Firestore.instance
+              .collection('users')
+              .document(signUpResponse.user.uid)
+              .setData({'username': _username, 'email': _email,'img_url':img_url,'userId':signUpResponse.user.uid});
         }
         setState(() {
-           isLoading = false;       
-                });
+          isLoading = false;
+        });
         
       } on PlatformException catch (error) {
         var errormsg = 'Could not be authenticated. Please try again later';
@@ -67,19 +89,18 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
           errormsg = error.message;
         }
         setState(() {
-                  isLoading = false;
-                });
-        Scaffold.of(context).showSnackBar(SnackBar(
+          isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(errormsg),
           backgroundColor: Theme.of(context).errorColor,
         ));
-      }
-      catch(error){
-          //For ANy other errors
-           setState(() {
-                  isLoading = false;
-                });
-          print(error);
+      } catch (error) {
+        //For ANy other errors
+        setState(() {
+          isLoading = false;
+        });
+        print(error);
       }
     }
   }
@@ -135,6 +156,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
+                            if (!isSignIn) ImagePickerWidget(_pickedImage),
                             Container(
                               padding: EdgeInsets.all(10),
                               decoration: BoxDecoration(
@@ -255,19 +277,19 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                 ),
                               ),
                             SizedBox(height: 10),
-                           isLoading?CircularProgressIndicator():
-                            ElevatedButton(
-                                onPressed: _onClickSubmit,
-                                child: isSignIn
-                                    ? Text('Log In')
-                                    : Text('Sign Up')),
-                                   if(!isLoading)
-                            FlatButton(
-                                    onPressed: _onClickSignUp,
+                            isLoading
+                                ? CircularProgressIndicator()
+                                : ElevatedButton(
+                                    onPressed: _onClickSubmit,
                                     child: isSignIn
-                                ? Text('Create New Account'):Text('Sign In Instead')
-                                )
-                               
+                                        ? Text('Log In')
+                                        : Text('Sign Up')),
+                            if (!isLoading)
+                              FlatButton(
+                                  onPressed: _onClickSignUp,
+                                  child: isSignIn
+                                      ? Text('Create New Account')
+                                      : Text('Sign In Instead'))
                           ],
                         )),
                   ),

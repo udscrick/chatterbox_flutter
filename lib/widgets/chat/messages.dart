@@ -21,18 +21,23 @@ class Messages extends StatelessWidget {
       stream: Firestore.instance.collection('chats').orderBy("createdAt",descending: true).snapshots(),
       builder: (ctx, chatInfo) {
         if (chatInfo.connectionState == ConnectionState.waiting) {
-          return CircularProgressIndicator();
+          return Center(child: CircularProgressIndicator());
         }
         final chatDocs = chatInfo.data.documents;
         
             return ListView.builder(
             reverse: true,
               itemCount: chatDocs.length,
-              itemBuilder: (ctx, index) => MessageBubble(
+              itemBuilder: (ctx, index){ 
+                // print("Image Url: ${chatDocs[index]}");
+                return MessageBubble(
                 chatDocs[index]['text'],
+                chatDocs[index]['username'],
+                chatDocs[index]['userId'],
                 futureSnapshot.data.uid==chatDocs[index]['userId']?true:false,
                 messageKey:ValueKey(chatDocs[index].documentID)
-                )
+                );
+                }
                 );
           },
         );
